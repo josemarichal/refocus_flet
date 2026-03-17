@@ -26,9 +26,6 @@ jobs:
           channel: stable
           cache: false
 
-      - name: Confirm Flutter version
-        run: flutter --version
-
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -40,14 +37,48 @@ jobs:
       - name: Accept Android licenses
         run: yes | flutter doctor --android-licenses || true
 
-      - name: Build APK
-        run: flet build apk
+      - name: Generate Flutter project (expected to fail at compile)
+        run: flet build apk || true
 
-      - name: Upload APK artifact
+      - name: Show generated project structure
+        run: find . -name "main.dart" -not -path "*/.git/*" 2>/dev/null
+
+      - name: Patch bad flutter import in generated main.dart
+        run: |
+          find . -name "main.dart" -not -path "*/.git/*" | while read f; do
+            echo "Patching $f"
+            sed -i "s|package:flutter/flutter.dart|package:flet/flet.dart|g" "$f"
+            echo "--- imports after patch ---"
+            grep "^import" "$f"
+          done
+
+      - name: Find generated Flutter project root
+        id: flutter_project
+        run: |
+          # flet build apk puts the Flutter project under .flet/build/apk
+          PROJ=$(find . -name "gradlew" -not -path "*/.git/*" | head -1 | xargs dirname 2>/dev/null)
+          if [ -z "$PROJ" ]; then
+            PROJ=$(find . -name "build.gradle" -path "*/android/app*" | head -1 | sed 's|/android/app/build.gradle||')
+          fi
+          echo "project=$PROJ" >> $GITHUB_OUTPUT
+          echo "Flutter project at: $PROJ"
+
+      - name: Run Gradle assembleRelease
+        run: |
+          PROJ="${{ steps.flutter_project.outputs.project }}"
+          if [ -z "$PROJ" ]; then
+            echo "Could not find Flutter project — listing directories:"
+            ls -la
+            exit 1
+          fi
+          cd "$PROJ"
+          flutter build apk --release
+
+      - name: Find and upload APK
         uses: actions/upload-artifact@v4
         with:
           name: refocus-apk
-          path: build/apk/app-release.apk
+          path: "**/app-release.apk"
           retention-days: 30
 
       - name: Create Release
@@ -56,7 +87,7 @@ jobs:
         with:
           tag_name: build-${{ github.run_number }}
           name: "Refocus build ${{ github.run_number }}"
-          files: build/apk/app-release.apk
+          files: "**/app-release.apk"
           generate_release_notes: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
