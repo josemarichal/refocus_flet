@@ -17,7 +17,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Remove files that confuse Flet
-        run: rm -f pubspec.yaml main_old.py pyproject.toml
+        run: rm -f pubspec.yaml main_old.py pyproject.toml requirements.txt railway.toml
 
       - name: Set up Java 17
         uses: actions/setup-java@v4
@@ -51,10 +51,9 @@ jobs:
             --product Refocus \
             --build-version 1.0.0 \
             --build-number 1 \
-            --exclude requirements.txt \
-            --exclude railway.toml \
             --exclude README.md \
-            -v
+            --exclude .github \
+            -vv 2>&1
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
