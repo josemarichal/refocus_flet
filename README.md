@@ -1,41 +1,45 @@
-# Refocus — Flet Android App
+# Refocus
 
-A 30-day goal tracker built with [Flet](https://flet.dev), Python's Flutter framework.
+A 30-day goal adherence tracker. Tap circles daily. Fill the month.
 
-## Setup
+---
+
+## Open on Android
+
+1. Install the **Flet** app from [Google Play](https://play.google.com/store/apps/details?id=io.flet.flet)
+2. Tap **Connect** and scan this QR code:
+
+<!-- After deploying to Railway, replace the URL below with your actual app URL.  -->
+<!-- Generate a QR at https://qr.io, save as qr.png in the repo, then uncomment: -->
+<!-- ![Scan to open Refocus](qr.png) -->
+
+**Your app URL:** `https://YOUR-APP-NAME.up.railway.app`
+
+> To generate the QR: visit [qr.io](https://qr.io), paste your Railway URL,
+> download the PNG, add it to the repo as `qr.png`, then uncomment the image line above.
+
+---
+
+## Deploy your own
+
+1. Fork this repo
+2. Go to [railway.app](https://railway.app) → New Project → Deploy from GitHub
+3. Select this repo — Railway auto-detects `railway.toml` and deploys
+4. Copy your public URL from the Railway dashboard
+5. Generate a QR code for it and add to this README
+
+---
+
+## Run locally
 
 ```bash
 pip install flet
-```
-
-## Run on desktop (preview)
-
-```bash
-cd refocus_flet
 flet run main.py
 ```
 
-## Run on Android
-
-1. Install the **Flet** app from the Google Play Store on your phone
-2. On your computer, run:
-   ```bash
-   flet run --android main.py
-   ```
-3. Scan the QR code shown in your terminal with the Flet app
-
-## Build a standalone APK
-
-```bash
-flet build apk
-```
-
-The APK will be in `build/apk/`. Transfer it to your phone and install
-(you may need to allow installs from unknown sources in Settings).
-
 ## Features
 
-- **Today view** — tap each goal's circle to cycle: empty → done → partial
-- **Month view** — full 30-day grid per goal with adherence %, streak, and completion count
-- **Persistent storage** — progress saves automatically between sessions
-- Deep purple palette, "wrestle with god" sits apart with italic styling
+- Today view — tap to cycle each goal: empty → done → partial
+- Month view — 30-day circle grid with adherence %, streak, completions
+- Progress saves automatically between sessions
+- 12 goals preloaded, all editable
