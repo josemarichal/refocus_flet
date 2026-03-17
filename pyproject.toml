@@ -1,0 +1,9 @@
+[tool.flet]
+org = "com.refocus"
+product = "Refocus"
+description = "30-day goal adherence tracker"
+
+[tool.flet.android]
+compileSdkVersion = 34
+minSdkVersion = 21
+targetSdkVersion = 34
