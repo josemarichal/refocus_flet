@@ -142,30 +142,45 @@ def main(page: ft.Page):
                 return tap
 
             row = ft.Container(
-                content=ft.ListTile(
-                    leading=ft.GestureDetector(
-                        content=circle_icon(val, size=26),
-                        on_tap=make_circle_tap(i, day_idx),
-                    ),
-                    title=ft.Text(
-                        g["name"],
-                        size=13,
-                        italic=g["italic"],
-                        color=TEXT_DARK,
-                    ),
-                    trailing=ft.Row(
-                        [
-                            ft.Text(f"{streak}d", size=10, color=PURPLE_MUTED),
-                            ft.Icon(ft.icons.CHEVRON_RIGHT,
-                                    color=PURPLE_BORDER, size=20),
-                        ],
-                        tight=True,
-                        spacing=4,
-                    ),
-                    on_click=make_chevron_tap(i),
-                    content_padding=ft.padding.symmetric(
-                        horizontal=8, vertical=0),
-                    min_vertical_padding=0,
+                content=ft.Row(
+                    [
+                        ft.GestureDetector(
+                            content=ft.Container(
+                                content=circle_icon(val, size=26),
+                                width=44,
+                                height=44,
+                                alignment=ft.alignment.center,
+                            ),
+                            on_tap=make_circle_tap(i, day_idx),
+                            behavior=ft.HitTestBehavior.OPAQUE,
+                        ),
+                        ft.GestureDetector(
+                            content=ft.Container(
+                                content=ft.Row(
+                                    [
+                                        ft.Text(
+                                            g["name"],
+                                            size=13,
+                                            italic=g["italic"],
+                                            color=TEXT_DARK,
+                                            expand=True,
+                                        ),
+                                        ft.Text(f"{streak}d", size=10,
+                                                color=PURPLE_MUTED),
+                                        ft.Icon(ft.icons.CHEVRON_RIGHT,
+                                                color=PURPLE_BORDER, size=20),
+                                    ],
+                                    spacing=8,
+                                ),
+                                padding=ft.padding.only(right=8),
+                            ),
+                            expand=True,
+                            on_tap=make_chevron_tap(i),
+                            behavior=ft.HitTestBehavior.OPAQUE,
+                        ),
+                    ],
+                    spacing=0,
+                    vertical_alignment=ft.CrossAxisAlignment.CENTER,
                 ),
                 bgcolor=WHITE,
                 border_radius=14,
