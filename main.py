@@ -303,7 +303,7 @@ def main(page: ft.Page):
         month_view = ft.View(
             "/month",
             bgcolor=PURPLE_PALE,
-            padding=0,
+            padding=ft.padding.all(12),
             appbar=ft.AppBar(
                 leading=ft.IconButton(
                     icon=ft.icons.ARROW_BACK,
@@ -392,7 +392,6 @@ def main(page: ft.Page):
                 )
             ],
             scroll=ft.ScrollMode.AUTO,
-            padding=ft.padding.all(12),
         )
 
         page.views.append(month_view)
