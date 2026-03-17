@@ -13,6 +13,11 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v4
 
+      - name: Remove files that confuse Flet
+        run: |
+          rm -f pubspec.yaml
+          rm -f main_old.py
+
       - name: Set up Java 17
         uses: actions/setup-java@v4
         with:
@@ -37,27 +42,30 @@ jobs:
       - name: Accept Android licenses
         run: yes | flutter doctor --android-licenses || true
 
-      - name: Flutter doctor
-        run: flutter doctor -v
-
-      - name: Flet version and help
+      - name: Build APK
         run: |
-          flet --version
-          flet build --help
+          flet build apk . \
+            --org com.refocus \
+            --project refocus \
+            --product Refocus \
+            --build-version 1.0.0 \
+            --build-number 1 \
+            -v
 
-      - name: Run flet build apk (verbose, capture all output)
-        run: flet build apk --verbose 2>&1 || true
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: refocus-apk
+          path: build/apk/app-release.apk
+          retention-days: 30
 
-      - name: Show everything created
-        run: |
-          echo "=== root ==="
-          ls -la
-          echo "=== hidden dirs ==="
-          ls -la .flet 2>/dev/null || echo "no .flet dir"
-          ls -la build 2>/dev/null || echo "no build dir"
-          echo "=== all dart files ==="
-          find . -name "*.dart" -not -path "*/.git/*" 2>/dev/null || echo "none found"
-          echo "=== all pubspec.yaml files ==="
-          find . -name "pubspec.yaml" -not -path "*/.git/*" 2>/dev/null || echo "none found"
-          echo "=== all gradlew files ==="
-          find . -name "gradlew" -not -path "*/.git/*" 2>/dev/null || echo "none found"
+      - name: Create Release
+        if: github.ref == 'refs/heads/main'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: build-${{ github.run_number }}
+          name: "Refocus build ${{ github.run_number }}"
+          files: build/apk/app-release.apk
+          generate_release_notes: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
