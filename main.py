@@ -142,34 +142,33 @@ def main(page: ft.Page):
                 return tap
 
             row = ft.Container(
-                content=ft.Row(
-                    [
-                        ft.GestureDetector(
-                            content=circle_icon(val, size=26),
-                            on_tap=make_circle_tap(i, day_idx),
-                        ),
-                        ft.Text(
-                            g["name"],
-                            size=13,
-                            italic=g["italic"],
-                            color=TEXT_DARK,
-                            expand=True,
-                        ),
-                        ft.Text(f"{streak}d", size=10, color=PURPLE_MUTED),
-                        ft.GestureDetector(
-                            content=ft.Icon(
-                                ft.icons.CHEVRON_RIGHT,
-                                color=PURPLE_BORDER,
-                                size=20,
-                            ),
-                            on_tap=make_chevron_tap(i),
-                        ),
-                    ],
-                    vertical_alignment=ft.CrossAxisAlignment.CENTER,
+                content=ft.ListTile(
+                    leading=ft.GestureDetector(
+                        content=circle_icon(val, size=26),
+                        on_tap=make_circle_tap(i, day_idx),
+                    ),
+                    title=ft.Text(
+                        g["name"],
+                        size=13,
+                        italic=g["italic"],
+                        color=TEXT_DARK,
+                    ),
+                    trailing=ft.Row(
+                        [
+                            ft.Text(f"{streak}d", size=10, color=PURPLE_MUTED),
+                            ft.Icon(ft.icons.CHEVRON_RIGHT,
+                                    color=PURPLE_BORDER, size=20),
+                        ],
+                        tight=True,
+                        spacing=4,
+                    ),
+                    on_click=make_chevron_tap(i),
+                    content_padding=ft.padding.symmetric(
+                        horizontal=8, vertical=0),
+                    min_vertical_padding=0,
                 ),
                 bgcolor=WHITE,
                 border_radius=14,
-                padding=ft.padding.symmetric(horizontal=12, vertical=10),
                 border=ft.border.all(1.5, PURPLE_LIGHT),
             )
             rows.append(row)
