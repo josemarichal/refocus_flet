@@ -37,57 +37,27 @@ jobs:
       - name: Accept Android licenses
         run: yes | flutter doctor --android-licenses || true
 
-      - name: Generate Flutter project (expected to fail at compile)
-        run: flet build apk || true
+      - name: Flutter doctor
+        run: flutter doctor -v
 
-      - name: Show generated project structure
-        run: find . -name "main.dart" -not -path "*/.git/*" 2>/dev/null
-
-      - name: Patch bad flutter import in generated main.dart
+      - name: Flet version and help
         run: |
-          find . -name "main.dart" -not -path "*/.git/*" | while read f; do
-            echo "Patching $f"
-            sed -i "s|package:flutter/flutter.dart|package:flet/flet.dart|g" "$f"
-            echo "--- imports after patch ---"
-            grep "^import" "$f"
-          done
+          flet --version
+          flet build --help
 
-      - name: Find generated Flutter project root
-        id: flutter_project
+      - name: Run flet build apk (verbose, capture all output)
+        run: flet build apk --verbose 2>&1 || true
+
+      - name: Show everything created
         run: |
-          # flet build apk puts the Flutter project under .flet/build/apk
-          PROJ=$(find . -name "gradlew" -not -path "*/.git/*" | head -1 | xargs dirname 2>/dev/null)
-          if [ -z "$PROJ" ]; then
-            PROJ=$(find . -name "build.gradle" -path "*/android/app*" | head -1 | sed 's|/android/app/build.gradle||')
-          fi
-          echo "project=$PROJ" >> $GITHUB_OUTPUT
-          echo "Flutter project at: $PROJ"
-
-      - name: Run Gradle assembleRelease
-        run: |
-          PROJ="${{ steps.flutter_project.outputs.project }}"
-          if [ -z "$PROJ" ]; then
-            echo "Could not find Flutter project — listing directories:"
-            ls -la
-            exit 1
-          fi
-          cd "$PROJ"
-          flutter build apk --release
-
-      - name: Find and upload APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: refocus-apk
-          path: "**/app-release.apk"
-          retention-days: 30
-
-      - name: Create Release
-        if: github.ref == 'refs/heads/main'
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: build-${{ github.run_number }}
-          name: "Refocus build ${{ github.run_number }}"
-          files: "**/app-release.apk"
-          generate_release_notes: false
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          echo "=== root ==="
+          ls -la
+          echo "=== hidden dirs ==="
+          ls -la .flet 2>/dev/null || echo "no .flet dir"
+          ls -la build 2>/dev/null || echo "no build dir"
+          echo "=== all dart files ==="
+          find . -name "*.dart" -not -path "*/.git/*" 2>/dev/null || echo "none found"
+          echo "=== all pubspec.yaml files ==="
+          find . -name "pubspec.yaml" -not -path "*/.git/*" 2>/dev/null || echo "none found"
+          echo "=== all gradlew files ==="
+          find . -name "gradlew" -not -path "*/.git/*" 2>/dev/null || echo "none found"
