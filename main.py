@@ -27,7 +27,7 @@ PURPLE_BORDER = "#C8BFEA"
 WHITE         = "#FFFFFF"
 TEXT_DARK     = "#1C1B2E"
 RED_DELETE    = "#E53935"
-CYCLE = [0, 1, 0.5]
+CYCLE = [0, 0.25, 0.5, 0.75, 1]
 
 current_goal = 0
 
@@ -70,31 +70,60 @@ def circle_icon(value, size=26):
             content=ft.Icon(ft.Icons.CHECK, color=WHITE, size=size * 0.5),
             alignment=ft.Alignment(0, 0),
         )
-    elif value == 0.5:
+    elif value == 0:
+        return ft.Container(
+            width=size, height=size,
+            border_radius=size,
+            bgcolor=WHITE,
+            border=ft.border.all(1.5, PURPLE_BORDER),
+        )
+    else:
+        # Drawing quadrants for 0.25, 0.5, 0.75
+        half = size / 2
+        
+        def quad(is_filled):
+            return ft.Container(
+                width=half, height=half,
+                bgcolor=PURPLE_MID if is_filled else "transparent",
+            )
+
         return ft.Stack(
             width=size, height=size,
             controls=[
+                # Base circle border
                 ft.Container(
                     width=size, height=size,
                     border_radius=size,
                     bgcolor=WHITE,
                     border=ft.border.all(2, PURPLE_MID),
                 ),
+                # Quadrants inside a Column of Rows
                 ft.Container(
-                    width=size / 2, height=size,
-                    bgcolor=PURPLE_MID,
-                    border_radius=ft.BorderRadius(
-                        top_left=size, bottom_left=size,
-                        top_right=0, bottom_right=0),
-                ),
+                    width=size, height=size,
+                    padding=1, # Subtly inset for cleaner border look
+                    content=ft.Column(
+                        [
+                            ft.Row([
+                                # Top-Left
+                                ft.Container(width=half-1, height=half-1, bgcolor=PURPLE_MID if value >= 1.0 else "transparent", 
+                                             border_radius=ft.BorderRadius(top_left=half, top_right=0, bottom_left=0, bottom_right=0)),
+                                # Top-Right (First step: 0.25)
+                                ft.Container(width=half-1, height=half-1, bgcolor=PURPLE_MID if value >= 0.25 else "transparent", 
+                                             border_radius=ft.BorderRadius(top_left=0, top_right=half, bottom_left=0, bottom_right=0)),
+                            ], spacing=0),
+                            ft.Row([
+                                # Bottom-Left (Third step: 0.75)
+                                ft.Container(width=half-1, height=half-1, bgcolor=PURPLE_MID if value >= 0.75 else "transparent", 
+                                             border_radius=ft.BorderRadius(top_left=0, top_right=0, bottom_left=half, bottom_right=0)),
+                                # Bottom-Right (Second step: 0.5)
+                                ft.Container(width=half-1, height=half-1, bgcolor=PURPLE_MID if value >= 0.5 else "transparent", 
+                                             border_radius=ft.BorderRadius(top_left=0, top_right=0, bottom_left=0, bottom_right=half)),
+                            ], spacing=0),
+                        ],
+                        spacing=0,
+                    )
+                )
             ],
-        )
-    else:
-        return ft.Container(
-            width=size, height=size,
-            border_radius=size,
-            bgcolor=WHITE,
-            border=ft.border.all(1.5, PURPLE_BORDER),
         )
 
 
@@ -230,8 +259,13 @@ def main(page: ft.Page):
 
                 def make_cycle(idx, didx):
                     def handler(e):
-                        cur = CYCLE.index(state["data"][idx][didx])
-                        state["data"][idx][didx] = CYCLE[(cur + 1) % 3]
+                        cur_val = state["data"][idx][didx]
+                        # find next index in CYCLE
+                        try:
+                            cur_idx = CYCLE.index(cur_val)
+                        except ValueError:
+                            cur_idx = 0
+                        state["data"][idx][didx] = CYCLE[(cur_idx + 1) % len(CYCLE)]
                         save_state(page, state)
                         show_view("today")
                     return handler
@@ -392,10 +426,10 @@ def main(page: ft.Page):
         today_day = now.day
 
         done   = sum(1 for v in data[:today_day] if v == 1)
-        half   = sum(1 for v in data[:today_day] if v == 0.5)
-        score  = done + half * 0.5
+        score  = sum(data[:today_day])
         pct    = round((score / today_day) * 100) if today_day > 0 else 0
-        streak = cur = 0
+        streak = 0
+        cur    = 0
         for d in range(today_day - 1, -1, -1):
             if data[d] > 0:
                 cur += 1
@@ -405,8 +439,12 @@ def main(page: ft.Page):
 
         def make_dot(d_idx):
             def handler(e):
-                cur_v = CYCLE.index(state["data"][goal_idx][d_idx])
-                state["data"][goal_idx][d_idx] = CYCLE[(cur_v + 1) % 3]
+                cur_v = state["data"][goal_idx][d_idx]
+                try:
+                    cur_idx = CYCLE.index(cur_v)
+                except ValueError:
+                    cur_idx = 0
+                state["data"][goal_idx][d_idx] = CYCLE[(cur_idx + 1) % len(CYCLE)]
                 save_state(page, state)
                 show_view("month")
             return handler
