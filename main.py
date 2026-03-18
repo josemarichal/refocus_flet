@@ -120,6 +120,48 @@ def main(page: ft.Page):
             padding=ft.padding.only(bottom=8),
         ))
 
+        ritual_key = f"ritual_{today_day}"
+        ritual_val = state.get("rituals", {}).get(ritual_key, "")
+
+        def on_ritual_change(e):
+            if "rituals" not in state:
+                state["rituals"] = {}
+            state["rituals"][ritual_key] = e.control.value
+            save_state(page, state)
+
+        rows.append(ft.Container(
+            content=ft.Column(
+                [
+                    ft.Text("ritual", size=10, color=PURPLE_MUTED,
+                            weight=ft.FontWeight.W_600, letter_spacing=0.8),
+                    ft.TextField(
+                        value=ritual_val,
+                        hint_text="what is your intention for today?",
+                        hint_style=ft.TextStyle(
+                            color=PURPLE_BORDER, size=12, italic=True),
+                        border_color=PURPLE_BORDER,
+                        focused_border_color=PURPLE_MID,
+                        cursor_color=PURPLE_MID,
+                        text_style=ft.TextStyle(
+                            color=TEXT_DARK, size=13, italic=True),
+                        min_lines=2,
+                        max_lines=4,
+                        multiline=True,
+                        on_change=on_ritual_change,
+                        border_radius=10,
+                        content_padding=ft.padding.symmetric(
+                            horizontal=10, vertical=8),
+                    ),
+                ],
+                spacing=4,
+            ),
+            bgcolor=WHITE,
+            border_radius=12,
+            border=ft.border.all(1, PURPLE_LIGHT),
+            padding=ft.padding.symmetric(horizontal=12, vertical=10),
+            margin=ft.margin.only(bottom=10),
+        ))
+
         for i, g in enumerate(GOALS):
             if g["sep"]:
                 rows.append(ft.Divider(height=8, color=PURPLE_BORDER))
