@@ -3,18 +3,18 @@ import json
 from datetime import datetime
 
 GOALS = [
-    {"name": "build soil",           "italic": False, "sep": False},
-    {"name": "avoid injury",         "italic": False, "sep": False},
-    {"name": "gain strength slowly", "italic": False, "sep": False},
-    {"name": "walk more",            "italic": False, "sep": False},
-    {"name": "eat / drink less crap","italic": False, "sep": False},
-    {"name": "drink more green tea", "italic": False, "sep": False},
-    {"name": "learn techniques",     "italic": False, "sep": False},
-    {"name": "appreciate / accept",  "italic": False, "sep": False},
-    {"name": "write to think",       "italic": False, "sep": False},
-    {"name": "reach out to friends", "italic": False, "sep": False},
-    {"name": "create community",     "italic": False, "sep": False},
-    {"name": "wrestle with god",     "italic": True,  "sep": True},
+    {"name": "build soil",            "italic": False, "sep": False},
+    {"name": "avoid injury",          "italic": False, "sep": False},
+    {"name": "gain strength slowly",  "italic": False, "sep": False},
+    {"name": "walk more",             "italic": False, "sep": False},
+    {"name": "eat / drink less crap", "italic": False, "sep": False},
+    {"name": "drink more green tea",  "italic": False, "sep": False},
+    {"name": "learn techniques",      "italic": False, "sep": False},
+    {"name": "appreciate / accept",   "italic": False, "sep": False},
+    {"name": "write to think",        "italic": False, "sep": False},
+    {"name": "reach out to friends",  "italic": False, "sep": False},
+    {"name": "create community",      "italic": False, "sep": False},
+    {"name": "wrestle with god",      "italic": True,  "sep": True},
 ]
 
 DAYS = 30
@@ -28,17 +28,22 @@ WHITE         = "#FFFFFF"
 TEXT_DARK     = "#1C1B2E"
 CYCLE = [0, 1, 0.5]
 
+current_goal = 0
+
 
 def load_state(page):
     try:
         raw = page.client_storage.get("refocus_state")
         if raw:
-            return json.loads(raw)
+            d = json.loads(raw)
+            # ensure correct length
+            while len(d["data"]) < len(GOALS):
+                d["data"].append([0] * DAYS)
+            return d
     except Exception:
         pass
-    now = datetime.now()
     return {
-        "month": now.strftime("%B %Y"),
+        "month": datetime.now().strftime("%B %Y"),
         "data":  [[0] * DAYS for _ in GOALS],
     }
 
@@ -87,6 +92,7 @@ def circle_icon(value, size=26):
 
 
 def main(page: ft.Page):
+    global current_goal
     page.title = "Refocus"
     page.theme_mode = ft.ThemeMode.LIGHT
     page.bgcolor = PURPLE_PALE
@@ -94,13 +100,14 @@ def main(page: ft.Page):
 
     state = load_state(page)
 
-    def show_today():
+    # ── TODAY VIEW ────────────────────────────────────────────────
+    def build_today():
         now = datetime.now()
         today_day = now.day
-
         rows = []
-        rows.append(
-            ft.Row(
+
+        rows.append(ft.Container(
+            content=ft.Row(
                 [
                     ft.Text("TODAY — " + now.strftime("%a %d").upper(),
                             size=11, weight=ft.FontWeight.W_600,
@@ -109,14 +116,13 @@ def main(page: ft.Page):
                             size=11, color=PURPLE_MUTED),
                 ],
                 alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
-            )
-        )
-        rows.append(ft.Container(height=8))
+            ),
+            padding=ft.padding.only(bottom=8),
+        ))
 
         for i, g in enumerate(GOALS):
             if g["sep"]:
-                rows.append(ft.Divider(height=1, color=PURPLE_BORDER))
-                rows.append(ft.Container(height=4))
+                rows.append(ft.Divider(height=8, color=PURPLE_BORDER))
 
             day_idx = min(today_day - 1, DAYS - 1)
             val = state["data"][i][day_idx]
@@ -128,68 +134,64 @@ def main(page: ft.Page):
                 else:
                     break
 
-            def make_circle_tap(idx, didx):
-                def tap(_):
+            def make_cycle(idx, didx):
+                def handler(e):
                     cur = CYCLE.index(state["data"][idx][didx])
                     state["data"][idx][didx] = CYCLE[(cur + 1) % 3]
                     save_state(page, state)
-                    show_today()
-                return tap
+                    page.go("/")
+                return handler
 
-            def make_chevron_tap(idx):
-                def tap(_):
-                    show_month(idx)
-                return tap
+            def make_nav(idx):
+                def handler(e):
+                    global current_goal
+                    current_goal = idx
+                    page.go("/month")
+                return handler
 
-            row = ft.Container(
+            rows.append(ft.Container(
+                margin=ft.margin.only(bottom=5),
                 content=ft.Row(
                     [
-                        ft.GestureDetector(
-                            content=ft.Container(
-                                content=circle_icon(val, size=26),
-                                width=44,
-                                height=44,
-                                alignment=ft.alignment.center,
-                            ),
-                            on_tap=make_circle_tap(i, day_idx),
-                            behavior=ft.HitTestBehavior.OPAQUE,
+                        ft.Container(
+                            content=circle_icon(val, size=26),
+                            width=44, height=44,
+                            alignment=ft.alignment.center,
+                            on_click=make_cycle(i, day_idx),
                         ),
-                        ft.GestureDetector(
-                            content=ft.Container(
-                                content=ft.Row(
-                                    [
-                                        ft.Text(
-                                            g["name"],
-                                            size=13,
-                                            italic=g["italic"],
-                                            color=TEXT_DARK,
-                                            expand=True,
-                                        ),
-                                        ft.Text(f"{streak}d", size=10,
-                                                color=PURPLE_MUTED),
-                                        ft.Icon(ft.icons.CHEVRON_RIGHT,
-                                                color=PURPLE_BORDER, size=20),
-                                    ],
-                                    spacing=8,
-                                ),
-                                padding=ft.padding.only(right=8),
+                        ft.Container(
+                            content=ft.Row(
+                                [
+                                    ft.Text(
+                                        g["name"],
+                                        size=13,
+                                        italic=g["italic"],
+                                        color=TEXT_DARK,
+                                        expand=True,
+                                    ),
+                                    ft.Text(f"{streak}d", size=10,
+                                            color=PURPLE_MUTED),
+                                    ft.Icon(ft.icons.CHEVRON_RIGHT,
+                                            color=PURPLE_BORDER, size=18),
+                                ],
+                                spacing=6,
                             ),
                             expand=True,
-                            on_tap=make_chevron_tap(i),
-                            behavior=ft.HitTestBehavior.OPAQUE,
+                            height=44,
+                            alignment=ft.alignment.center_left,
+                            padding=ft.padding.only(right=10),
+                            on_click=make_nav(i),
                         ),
                     ],
                     spacing=0,
                     vertical_alignment=ft.CrossAxisAlignment.CENTER,
                 ),
                 bgcolor=WHITE,
-                border_radius=14,
-                border=ft.border.all(1.5, PURPLE_LIGHT),
-            )
-            rows.append(row)
-            rows.append(ft.Container(height=5))
+                border_radius=12,
+                border=ft.border.all(1, PURPLE_LIGHT),
+            ))
 
-        today_view = ft.View(
+        return ft.View(
             "/",
             bgcolor=PURPLE_PALE,
             padding=0,
@@ -210,9 +212,8 @@ def main(page: ft.Page):
                                         spacing=0,
                                     ),
                                     ft.Container(
-                                        content=ft.Text(
-                                            state["month"], size=11,
-                                            color=WHITE),
+                                        content=ft.Text(state["month"],
+                                                        size=11, color=WHITE),
                                         bgcolor="#44FFFFFF",
                                         border_radius=20,
                                         padding=ft.padding.symmetric(
@@ -224,7 +225,7 @@ def main(page: ft.Page):
                             ),
                             bgcolor=PURPLE_DARK,
                             padding=ft.padding.only(
-                                left=16, right=16, top=10, bottom=16),
+                                left=16, right=16, top=12, bottom=16),
                         ),
                         ft.Container(
                             content=ft.Column(
@@ -234,31 +235,27 @@ def main(page: ft.Page):
                                 expand=True,
                             ),
                             padding=ft.padding.symmetric(
-                                horizontal=12, vertical=8),
+                                horizontal=12, vertical=10),
                             expand=True,
                         ),
                     ],
                     spacing=0,
                     expand=True,
-                )
+                ),
             ],
         )
 
-        page.views.clear()
-        page.views.append(today_view)
-        page.update()
-
-    def show_month(goal_idx):
+    # ── MONTH VIEW ────────────────────────────────────────────────
+    def build_month(goal_idx):
         g = GOALS[goal_idx]
         data = state["data"][goal_idx]
         now = datetime.now()
         today_day = now.day
 
-        done = sum(1 for v in data[:today_day] if v == 1)
-        partial = sum(1 for v in data[:today_day] if v == 0.5)
-        score = done + partial * 0.5
-        pct = round((score / today_day) * 100) if today_day > 0 else 0
-
+        done   = sum(1 for v in data[:today_day] if v == 1)
+        half   = sum(1 for v in data[:today_day] if v == 0.5)
+        score  = done + half * 0.5
+        pct    = round((score / today_day) * 100) if today_day > 0 else 0
         streak = cur = 0
         for d in range(today_day - 1, -1, -1):
             if data[d] > 0:
@@ -267,54 +264,49 @@ def main(page: ft.Page):
             else:
                 break
 
-        def make_dot_tap(d_idx):
-            def tap(_):
+        def make_dot(d_idx):
+            def handler(e):
                 cur_v = CYCLE.index(state["data"][goal_idx][d_idx])
                 state["data"][goal_idx][d_idx] = CYCLE[(cur_v + 1) % 3]
                 save_state(page, state)
-                show_month(goal_idx)
-            return tap
+                page.go("/month")
+            return handler
 
         grid_rows = []
-        row_cells = []
+        cells = []
         for d in range(DAYS):
-            day_num = d + 1
-            is_future = day_num > today_day
-
-            if is_future:
+            dn = d + 1
+            if dn > today_day:
                 dot = ft.Container(
-                    width=30, height=30,
-                    border_radius=15,
+                    width=32, height=32, border_radius=16,
                     bgcolor="#F0EBF9",
                     border=ft.border.all(1, "#E4DAFA"),
                 )
             else:
-                dot = ft.GestureDetector(
-                    content=circle_icon(data[d], size=30),
-                    on_tap=make_dot_tap(d),
+                dot = ft.Container(
+                    content=circle_icon(data[d], size=32),
+                    width=32, height=32,
+                    on_click=make_dot(d),
                 )
+            cells.append(ft.Container(
+                content=ft.Column(
+                    [
+                        ft.Text(str(dn), size=8, color=PURPLE_MUTED,
+                                text_align=ft.TextAlign.CENTER),
+                        dot,
+                    ],
+                    spacing=2,
+                    horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                ),
+                expand=True,
+            ))
+            if len(cells) == 7 or d == DAYS - 1:
+                while len(cells) < 7:
+                    cells.append(ft.Container(expand=True))
+                grid_rows.append(ft.Row(cells, spacing=2))
+                cells = []
 
-            cell = ft.Column(
-                [
-                    ft.Text(str(day_num), size=8, color=PURPLE_MUTED,
-                            text_align=ft.TextAlign.CENTER),
-                    dot,
-                ],
-                spacing=2,
-                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-            )
-            row_cells.append(ft.Container(content=cell, expand=True))
-
-            if len(row_cells) == 7 or d == DAYS - 1:
-                while len(row_cells) < 7:
-                    row_cells.append(ft.Container(expand=True))
-                grid_rows.append(
-                    ft.Row(row_cells, spacing=4,
-                           alignment=ft.MainAxisAlignment.SPACE_BETWEEN)
-                )
-                row_cells = []
-
-        month_view = ft.View(
+        return ft.View(
             "/month",
             bgcolor=PURPLE_PALE,
             padding=ft.padding.all(12),
@@ -322,14 +314,14 @@ def main(page: ft.Page):
                 leading=ft.IconButton(
                     icon=ft.icons.ARROW_BACK,
                     icon_color=WHITE,
-                    on_click=lambda _: go_back(),
+                    on_click=lambda _: page.go("/"),
                 ),
                 title=ft.Column(
                     [
                         ft.Text(g["name"], size=16,
                                 weight=ft.FontWeight.W_500,
                                 italic=g["italic"], color=WHITE),
-                        ft.Text("tap circles to log",
+                        ft.Text("tap a circle to log",
                                 size=10, color="white70"),
                     ],
                     spacing=0,
@@ -343,48 +335,39 @@ def main(page: ft.Page):
                         ft.Row(
                             [
                                 ft.Container(
-                                    content=ft.Column(
-                                        [
-                                            ft.Text(f"{pct}%", size=22,
-                                                    weight=ft.FontWeight.W_500,
-                                                    color=PURPLE_MID),
-                                            ft.Text("adherence", size=9,
-                                                    color=PURPLE_MUTED),
-                                        ],
-                                        spacing=2,
-                                    ),
+                                    content=ft.Column([
+                                        ft.Text(f"{pct}%", size=22,
+                                                weight=ft.FontWeight.W_500,
+                                                color=PURPLE_MID),
+                                        ft.Text("adherence", size=9,
+                                                color=PURPLE_MUTED),
+                                    ], spacing=2),
                                     bgcolor=WHITE, border_radius=12,
                                     padding=ft.padding.symmetric(
                                         horizontal=12, vertical=10),
                                     expand=True,
                                 ),
                                 ft.Container(
-                                    content=ft.Column(
-                                        [
-                                            ft.Text(str(streak), size=22,
-                                                    weight=ft.FontWeight.W_500,
-                                                    color=PURPLE_MID),
-                                            ft.Text("streak", size=9,
-                                                    color=PURPLE_MUTED),
-                                        ],
-                                        spacing=2,
-                                    ),
+                                    content=ft.Column([
+                                        ft.Text(str(streak), size=22,
+                                                weight=ft.FontWeight.W_500,
+                                                color=PURPLE_MID),
+                                        ft.Text("streak", size=9,
+                                                color=PURPLE_MUTED),
+                                    ], spacing=2),
                                     bgcolor=WHITE, border_radius=12,
                                     padding=ft.padding.symmetric(
                                         horizontal=12, vertical=10),
                                     expand=True,
                                 ),
                                 ft.Container(
-                                    content=ft.Column(
-                                        [
-                                            ft.Text(str(done), size=22,
-                                                    weight=ft.FontWeight.W_500,
-                                                    color=PURPLE_MID),
-                                            ft.Text("completed", size=9,
-                                                    color=PURPLE_MUTED),
-                                        ],
-                                        spacing=2,
-                                    ),
+                                    content=ft.Column([
+                                        ft.Text(str(done), size=22,
+                                                weight=ft.FontWeight.W_500,
+                                                color=PURPLE_MID),
+                                        ft.Text("completed", size=9,
+                                                color=PURPLE_MUTED),
+                                    ], spacing=2),
                                     bgcolor=WHITE, border_radius=12,
                                     padding=ft.padding.symmetric(
                                         horizontal=12, vertical=10),
@@ -403,22 +386,27 @@ def main(page: ft.Page):
                     spacing=12,
                     scroll=ft.ScrollMode.AUTO,
                     expand=True,
-                )
+                ),
             ],
-            scroll=ft.ScrollMode.AUTO,
         )
 
-        page.views.append(month_view)
+    # ── ROUTING ───────────────────────────────────────────────────
+    def route_change(e):
+        page.views.clear()
+        if page.route == "/month":
+            page.views.append(build_month(current_goal))
+        else:
+            page.views.append(build_today())
         page.update()
 
-    def go_back():
-        if len(page.views) > 1:
-            page.views.pop()
-            page.update()
+    def view_pop(e):
+        page.views.pop()
+        top = page.views[-1]
+        page.go(top.route)
 
-    page.on_view_pop = lambda _: go_back()
-
-    show_today()
+    page.on_route_change = route_change
+    page.on_view_pop = view_pop
+    page.go("/")
 
 
 ft.app(target=main)
