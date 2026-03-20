@@ -1,5 +1,6 @@
 import flet as ft
 import json
+import os
 from datetime import datetime
 
 DEFAULT_GOALS = [
@@ -32,29 +33,60 @@ CYCLE = [0, 0.25, 0.5, 0.75, 1]
 current_goal = 0
 
 
+STATE_FILE = "state.json"
+
+
 def load_state(page):
-    try:
-        raw = page.client_storage.get("refocus_state")
-        if raw:
-            d = json.loads(raw)
-            # migrate: add goals if missing
-            if "goals" not in d:
-                d["goals"] = list(DEFAULT_GOALS)
-            # sync data length to goal count
-            while len(d["data"]) < len(d["goals"]):
-                d["data"].append([0] * DAYS)
-            d["data"] = d["data"][:len(d["goals"])]
-            return d
-    except Exception:
-        pass
-    return {
-        "month": datetime.now().strftime("%B %Y"),
-        "data":  [[0] * DAYS for _ in DEFAULT_GOALS],
-        "goals": list(DEFAULT_GOALS),
-    }
+    state = None
+    # 1. Try to load from local file
+    if os.path.exists(STATE_FILE):
+        try:
+            with open(STATE_FILE, "r") as f:
+                state = json.load(f)
+        except Exception as e:
+            print(f"Error loading {STATE_FILE}: {e}")
+
+    # 2. Migration: if no file, try client_storage (for existing users)
+    if state is None:
+        try:
+            raw = page.client_storage.get("refocus_state")
+            if raw:
+                state = json.loads(raw)
+        except Exception:
+            pass
+
+    # 3. Default state if nothing found
+    if state is None:
+        state = {
+            "month": datetime.now().strftime("%B %Y"),
+            "data":  [[0] * DAYS for _ in DEFAULT_GOALS],
+            "goals": list(DEFAULT_GOALS),
+            "rituals": {}
+        }
+
+    # migrate missing fields
+    if "goals" not in state:
+        state["goals"] = list(DEFAULT_GOALS)
+    if "rituals" not in state:
+        state["rituals"] = {}
+    
+    # sync data length to goal count
+    while len(state["data"]) < len(state["goals"]):
+        state["data"].append([0] * DAYS)
+    state["data"] = state["data"][:len(state["goals"])]
+
+    return state
 
 
 def save_state(page, state):
+    # Save to local file
+    try:
+        with open(STATE_FILE, "w") as f:
+            json.dump(state, f, indent=2)
+    except Exception as e:
+        print(f"Error saving {STATE_FILE}: {e}")
+
+    # Also keep client_storage in sync as a backup (optional, but good for mobile/web)
     try:
         page.client_storage.set("refocus_state", json.dumps(state))
     except Exception:
